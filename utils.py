@@ -31,8 +31,9 @@ from dataclasses import asdict, is_dataclass
 # }
 
 
-def serialize_generated_answer(results):
+def serialize_generated_answer(results, parameters_info):
     serialized_data = []
+    serialized_data.append(parameters_info)
 
     for result in results:
         answer = result["answer"]

@@ -45,5 +45,5 @@ def run():
         print("Mean:", embedder[3])
         print("Std:", embedder[4], "\n")
 
-# if __name__ == '__main__':
-#     run()
+if __name__ == '__main__':
+    run()
