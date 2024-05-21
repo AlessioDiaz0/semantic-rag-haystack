@@ -37,7 +37,7 @@ ingest_pipeline = Pipeline()
 ingest_pipeline.add_component(
     "document_embedder",
     SentenceTransformersDocumentEmbedder(
-        model="sentence-transformers/all-mpnet-base-v2", device=ComponentDevice(device)
+        model="sentence-transformers/distiluse-base-multilingual-cased-v1", device=ComponentDevice(device)
     ),
 )
 ingest_pipeline.add_component(

@@ -50,7 +50,7 @@ generator = LlamaCppGenerator(
 # # Uses the sentence-transformers library to embed the text of the query
 # Different models should be tested to see which one works best for the use case
 text_embedder = SentenceTransformersTextEmbedder(
-    model="sentence-transformers/all-mpnet-base-v2", device=ComponentDevice(device)
+    model="sentence-transformers/distiluse-base-multilingual-cased-v1", device=ComponentDevice(device)
 )
 
 generator.warm_up()
@@ -76,7 +76,7 @@ rag_pipeline.add_component(
 rag_pipeline.add_component(
     "ranker",
     TransformersSimilarityRanker(
-        model="cross-encoder/ms-marco-MiniLM-L-", device=ComponentDevice(device)
+        model="cross-encoder/ms-marco-MiniLM-L-12-v2", device=ComponentDevice(device)
     ),
 )
 rag_pipeline.add_component("prompt_builder", PromptBuilder(template=chat_template))
@@ -114,3 +114,7 @@ for prompt_dict in prompts:
     results.append(result_with_original)
 
 serialize_generated_answer(results)
+
+if __name__ == '__main__':
+
+    run
