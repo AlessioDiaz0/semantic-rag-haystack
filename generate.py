@@ -13,31 +13,50 @@ from utils import read_input_json, serialize_generated_answer
 import argparse
 
 def generate(this_model, this_max_tokens, this_temperature,
-             this_top_k, this_top_p, this_n_batch):
+             this_top_k, this_top_p, this_n_batch, this_prompt):
 
-    print("NUMBER OF BATCHES",this_n_batch)
-    print(this_max_tokens)
     # if torch is compiled with cuda support, we can offload the computation to the GPU
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     # Arguably the most important part of the code. This is the "system prompt"
     # LLAMA3 required a specific format, so do not change the special tags
-    chat_template = """
-    <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    if len(this_prompt) > 0:
+        prompts_content = "\n".join([f"Question: {prompt[0]} Answer: {prompt[1]}" for prompt in this_prompt])
 
-    Answer the query from the context provided.
-    If it is possible to answer the question from the context, copy the answer from the context.
-    If the answer in the context isn't a complete sentence, make it one.
+        chat_template = ("""
+        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
 
-    Context:
-    {% for doc in documents %}
-    {{ doc.content }}
-    {% endfor %};
-    <eot_id><start_header_id|>user<|end_header_id|>
-    query: {{query}}
-    <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-    Answer:
-    """
+        """ +
+        f"{prompts_content}"
+        +
+        """
+
+        Context:
+        {% for doc in documents %}
+        {{ doc.content }}
+        {% endfor %};
+        <eot_id><start_header_id|>user<|end_header_id|>
+        query: {{query}}
+        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        Answer:
+        """)
+    else:
+        chat_template = """
+        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+        Answer the query from the context provided.
+        If it is possible to answer the question from the context, copy the answer from the context.
+        If the answer in the context isn't a complete sentence, make it one.
+
+        Context:
+        {% for doc in documents %}
+        {{ doc.content }}
+        {% endfor %};
+        <eot_id><start_header_id|>user<|end_header_id|>
+        query: {{query}}
+        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        Answer:
+        """
 
     # defining the generator using quantized llama.cpp model
     # lots of these parameters can have a significant impact
@@ -125,6 +144,31 @@ def generate(this_model, this_max_tokens, this_temperature,
 
     serialize_generated_answer(results, parameters_info)
 
+
+def collect_prompts():
+    isPrompted = ''
+    prompts = []
+    while(isPrompted != 'y' and isPrompted != 'n'):
+        isPrompted = (input("Would you like to provide QA's to the LLM with to improve accuracy? [Y/N]")).lower()
+
+    if(isPrompted == 'y'):
+        for i in range(3):
+            display_prompt_samples()
+            staff_prompt_q = input("Your question: ")
+            staff_prompt_a = input("Your answer: ")
+            prompts.append([staff_prompt_q, staff_prompt_a])
+            
+            more_prompts = (input(f"Would you like to continue ({i/3})? [Y/N]")).lower()
+            if(more_prompts == 'n'):
+                break
+
+    return prompts
+
+def display_prompt_samples():
+    print("These are some examples of good prompts:")
+    print("Question: When is the midterm?\n")
+    print("Answer: The Midterm will be on June 6th")
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description= 'LLM parameters')
 
@@ -140,6 +184,8 @@ if __name__ == '__main__':
                         help = "Top_p value Default: 1.0")
     parser.add_argument("-nb", "--n_batch", type = int, nargs= '+', default = [512],
                         help = "Number of batches Default: 512")
+    parser.add_argument("-promp", "--add_prompt", type = str, default = [""],
+                        help = "Allows stuff to input customed prompts")
     # parser.add_argument("-p", "--prompt", type = str, nargs= '+',
     #                     help = "Prompt given to the LLM Default: Read More")
     #Decided to not implement
@@ -152,4 +198,6 @@ if __name__ == '__main__':
                 for top_k in args.top_k:
                     for top_p in args.top_p:
                         for n_batch in args.n_batch:
-                            generate(model, max_tokens, temperature, top_k, top_p, n_batch)
+                                prompts = collect_prompts()
+                                generate(model, max_tokens, temperature, top_k, top_p, n_batch, prompts)
+
