@@ -20,43 +20,8 @@ def generate(this_model, this_max_tokens, this_temperature,
 
     # Arguably the most important part of the code. This is the "system prompt"
     # LLAMA3 required a specific format, so do not change the special tags
-    if len(this_prompt) > 0:
-        prompts_content = "\n".join([f"Question: {prompt[0]} Answer: {prompt[1]}" for prompt in this_prompt])
 
-        chat_template = ("""
-        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-        """ +
-        f"{prompts_content}"
-        +
-        """
-
-        Context:
-        {% for doc in documents %}
-        {{ doc.content }}
-        {% endfor %};
-        <eot_id><start_header_id|>user<|end_header_id|>
-        query: {{query}}
-        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-        Answer:
-        """)
-    else:
-        chat_template = """
-        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-        Answer the query from the context provided.
-        If it is possible to answer the question from the context, copy the answer from the context.
-        If the answer in the context isn't a complete sentence, make it one.
-
-        Context:
-        {% for doc in documents %}
-        {{ doc.content }}
-        {% endfor %};
-        <eot_id><start_header_id|>user<|end_header_id|>
-        query: {{query}}
-        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-        Answer:
-        """
+    chat_template = get_chat_template(this_prompt)
 
     # defining the generator using quantized llama.cpp model
     # lots of these parameters can have a significant impact
@@ -157,17 +122,64 @@ def collect_prompts():
             staff_prompt_q = input("Your question: ")
             staff_prompt_a = input("Your answer: ")
             prompts.append([staff_prompt_q, staff_prompt_a])
-            
-            more_prompts = (input(f"Would you like to continue ({i/3})? [Y/N]")).lower()
+            if(i >= 2):
+                more_prompts = (input(f"Would you like to continue ({i+1}/3)? [Y/N]")).lower()
             if(more_prompts == 'n'):
                 break
 
     return prompts
 
+def get_chat_template(prompts):
+    
+    if len(prompts) > 0:
+        prompts_content = "\n        ".join([f"Question: {prompt[0]} Answer: {prompt[1]}" for prompt in prompts])
+
+        chat_template = ("""
+        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+        """ +
+        f"Here are some examples:\n        {prompts_content}"
+        +
+        """
+
+        Context:
+        {% for doc in documents %}
+        {{ doc.content }}
+        {% endfor %};
+        <eot_id><start_header_id|>user<|end_header_id|>
+        query: {{query}}
+        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        Answer:
+        """)
+    else:
+        chat_template = """
+        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+        Answer the query from the context provided.
+        If it is possible to answer the question from the context, copy the answer from the context.
+        If the answer in the context isn't a complete sentence, make it one.
+
+        Context:
+        {% for doc in documents %}
+        {{ doc.content }}
+        {% endfor %};
+        <eot_id><start_header_id|>user<|end_header_id|>
+        query: {{query}}
+        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        Answer:
+        """
+
+    return chat_template
+
+
 def display_prompt_samples():
-    print("These are some examples of good prompts:")
-    print("Question: When is the midterm?\n")
-    print("Answer: The Midterm will be on June 6th")
+    print("\n\nThese are some examples of good prompts:")
+    print("\nQuestion: When is the midterm?")
+    print("Answer: The midterm will be on June 6th")
+    print("\nQuestion: What time are the professor office hours?")
+    print("Answer: Office hours are held on Mondays and Thursdays 11:00AM to 12PM")
+    print("\nQuestion: How much of the final counts towards our final grade?")
+    print("Answer: The final is 30% of your grade\n")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description= 'LLM parameters')
